@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt" >
+<html lang="pt" ng-app='RPJogo'>
   <head>
     <meta charset="utf-8">
     <title>RPJogo</title>
@@ -7,14 +7,20 @@
   <!-- Style -->
   <link rel="stylesheet" href="./../lib/css/bootstrap.css">
 
-  <!-- JS -->
+  <!-- JS Libs -->
   <script src="./../lib/js/angular.min.js" charset="utf-8"></script>
 
   <script src="./../lib/js/popper.min.js" charset="utf-8"></script>
   <script src="./../lib/js/jquery.min.js" charset="utf-8"></script>
   <script src="./../lib/js/bootstrap.js" charset="utf-8"></script>
+  <script src="./../lib/js/angular-ui-router.js" charset="utf-8"></script>
+
+  <!-- JS application -->
+  <script src="./../angular/index.js" charset="utf-8"></script>
+  <script src="./../angular/MainController.js" charset="utf-8"></script>
+
   </head>
-  <body>
+  <body ng-controller='MainController'>
     Hello World
   </body>
 </html>
