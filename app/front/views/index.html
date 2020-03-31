@@ -6,7 +6,7 @@
 
   <!-- Style -->
   <link rel="stylesheet" href="./../lib/css/bootstrap.css">
-
+  <link rel="stylesheet" href="./../myStyle.css">
   <!-- JS Libs -->
   <script src="./../lib/js/angular.min.js" charset="utf-8"></script>
 
@@ -22,42 +22,103 @@
   <script src="./../angular/MainController.js" charset="utf-8"></script>
 
 </head>
-<body ng-controller='MainController'>
+<body ng-controller='MainController' >
 
   <!-- <input type="text" name="" value="" ng-model='txt'>
   <p>{{txt}}</p>
   <button type="button" name="button" class="btn" ng-click='clogClicked()'>Console log</button> -->
 
+  <div class="card" ng-class="{'sword-pointer'  : sword_cursor_enabled}" >
+    <div class="row">
+      <div class="col">
+        <div class="card m-3" >
+          <div class="card-body">
+            <h5 class="card-title">{{last_clicked}}</h5>
+            <div id="container" style='clear:both; overflow:auto; height:70vh; width:70vw' ng-init='initGrid()' ></div>
 
-  <div class="row">
-    <div class="sm-col">
-      <div class="card d-flex" >
-        <div class="card-body">
-          <h5 class="card-title">Card title</h5>
-          <div id="container" style='clear:both' ng-init='initGrid()'></div>
+          </div>
+          <div class="form-group">
+            <label for="zoomSlider">Zoom</label>
+            <input id='zoomSlider' type="range" min="0.8" max="5" step='0.1' class="custom-range" ng-model='gridScale' ng-change='scaleOnChange(gridScale)'>
+          </div>
+        </div>
+      </div>
+
+      <div class="col">
+
+        <div class="card m-3 justify-content-md-center">
+
+
+
+          <h5 class="card-title">Novo Token</h5>
+          <div class="row p-1">
+
+            <div class="input-group col">
+              <div class="input-group-prepend">
+                <span class="input-group-text">Nome</span>
+              </div>
+              <input class="form-control" type="text" ng-model='newToken.name'>
+            </div>
+            <div class="input-group col">
+              <div class="input-group-prepend">
+                <span class="input-group-text">Cor</span>
+              </div>
+              <input class="form-control" type="color" ng-model='newToken.color' value='#00FF00'>
+            </div>
+
+          </div>
+
+          <div class="row p-1">
+
+            <div class="input-group col">
+              <div class="input-group-prepend">
+                <img class="input-group-text" src="./../static/icons/shield-24.png" alt="">
+                <!-- <span >CA</span> -->
+              </div>
+              <input class="form-control" type="text" ng-model='newToken.ca'>
+            </div>
+            <div class="input-group col">
+              <div class="input-group-prepend">
+                <img class="input-group-text" src="./../static/icons/heart-24.png" alt="">
+              </div>
+              <input class="form-control" type="text" ng-model='newToken.hp_max'>
+            </div>
+            <div class="input-group col">
+              <div class="input-group-prepend">
+                <img class="input-group-text" src="./../static/icons/walking-24.png" alt="">
+              </div>
+              <input class="form-control" type="text" ng-model='newToken.mov'>
+            </div>
+
+
+          </div>
+
+          <!-- <div class="form-group">
+            <input type="number" ng-model = 'newToken.x'>
+            <input type="number" ng-model = 'newToken.y'>
+            <button type="button" name="button" ng-click='drawTokensOnClick()' class="btn btn-primary">
+              Draw Tokens
+            </button>
+          </div>
+          <p>Selected token = {{selectedToken.name()}}</p> -->
 
         </div>
 
       </div>
+
     </div>
 
-    <div class="col">
-      <div class="card">
-        <div class="form-group">
-          <label for="zoomSlider">Zoom</label>
-          <input id='zoomSlider' type="range" min="0.5" max="5" step='0.1' class="custom-range" ng-model='gridScale' ng-change='scaleOnChange(gridScale)'>
-        </div>
-        <div class="form-group">
-          <input type="number" ng-model = 'newToken.x'>
-          <input type="number" ng-model = 'newToken.y'>
-          <button type="button" name="button" ng-click='drawTokensOnClick()' class="btn btn-primary">
-            Draw Tokens
-          </button>
-        </div>
+    <div class="card">
 
+      <div class="row justify-content-md-center">
+
+        <div class="card col-lg-2 m-3 border-solid" ng-repeat='token in token_dict' style='border-color : {{token.color}}'>
+          <span class="card-title" >{{token.name}}</span>
+        </div>
 
 
       </div>
+
 
     </div>
 
