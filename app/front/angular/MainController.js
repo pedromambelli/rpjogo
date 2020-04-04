@@ -7,17 +7,55 @@ angular.module('RPJogo').controller('MainController', ($scope, $rootScope) => {
     , text : {
       fontSize : 10
       , fontFamily : 'Calibri'
-      , fill : 'red'
-    }
+      , fill : 'black'
+    },
+    teams : [
+      {
+        name : "aliados",
+        color : "#54C6BE"
+      },
+      {
+        name : "inimigos",
+        color : "#E5243F"
+      },
+      {
+        name : "neutros",
+        color : "#F7B15C"
+      },
+    ]
 
   }
 
+  $scope.formEnabled = false
+
+  $scope.newTokenCreateOnClick = function () {
+    $scope.formEnabled = true
+  }
+
   $scope.newToken = {
+    name : 'teste',
     color : '#00ff00',
+    token_image : './../../TokenImages/dragon.png',
   };
+
+
 
   $scope.token_dict = {}
 
+  $scope.isEmpty = function (obj) {
+    return Object.keys($scope.token_dict).length === 0;
+  }
+
+
+
+  $scope.img_src = './../../TokenImages/dragon.png';
+  $scope.changed_src = function (input) {
+    let file_input = document.querySelector('#imageFile');
+    $scope.img_src = './../../TokenImages/' + file_input.files[0].name
+    console.log($scope.img_src);
+    $scope.newToken.token_image = $scope.img_src;
+    $scope.$apply()
+  }
 
   $scope.startZoomInStage = function () {
     var scaleBy = 1.1;
@@ -219,20 +257,25 @@ angular.module('RPJogo').controller('MainController', ($scope, $rootScope) => {
       }
     });
     token['img_ref'].on('mousemove', function(ev) {
-      let tooltip = $scope.tooltips_layer.find('.'+this.name()+"_tooltip")[0];
-      var mousePos = $scope.getRelativePointerPosition($scope.stage);
-      tooltip.x(mousePos.x);
-      tooltip.y(mousePos.y);
-      tooltip.visible(true);
-      $scope.tooltips_layer.draw();
+
 
       if (ev.evt.ctrlKey) {
         $scope.sword_cursor_enabled = true;
         $scope.$apply()
         // console.log($scope.sword_cursor_enabled);
       }
+      else if (ev.evt.shiftKey) {
+        $scope.heal_cursor_enabled = true;
+        $scope.$apply()
+        // console.log($scope.sword_cursor_enabled);
+      }
       else {
-        // $scope.stage.container().style.cursor = 'pointer';
+        let tooltip = $scope.tooltips_layer.find('.'+this.name()+"_tooltip")[0];
+        var mousePos = $scope.getRelativePointerPosition($scope.stage);
+        tooltip.x(mousePos.x);
+        tooltip.y(mousePos.y-10);
+        tooltip.visible(true);
+        $scope.tooltips_layer.draw();
       }
     });
 
@@ -242,6 +285,7 @@ angular.module('RPJogo').controller('MainController', ($scope, $rootScope) => {
       tooltip.visible(false)
       $scope.tooltips_layer.draw()
       $scope.sword_cursor_enabled = false;
+      $scope.heal_cursor_enabled = false;
       $scope.$apply()
       // console.log($scope.sword_cursor_enabled);
 
@@ -252,7 +296,10 @@ angular.module('RPJogo').controller('MainController', ($scope, $rootScope) => {
       // console.log("Event", ev);
 
       if (ev.evt.ctrlKey) {
-        alert('ataque registrado')
+        $scope.ataqueRegistrado(this.name())
+      }
+      else if (ev.evt.shiftKey) {
+        $scope.healRegistrado(this.name())
       }
       else{
         if ($scope.selectedToken) {
@@ -289,7 +336,7 @@ angular.module('RPJogo').controller('MainController', ($scope, $rootScope) => {
     var tooltip = new Konva.Label({
         x: position[0],
         y: position[1],
-        opacity: 0.75,
+        opacity: 1,
         name : $scope.newToken.name + "_tooltip"
       });
 
@@ -304,19 +351,47 @@ angular.module('RPJogo').controller('MainController', ($scope, $rootScope) => {
         shadowBlur: 10,
         shadowOffsetX: 10,
         shadowOffsetY: 10,
-        shadowOpacity: 0.5
+        shadowOpacity: 1
       })
     );
 
-    tooltip.add(
-      new Konva.Text({
-        text: 'CA: '+$scope.newToken.ca+'\nHP: '+$scope.newToken.hp_max+'\nMov: '+ +$scope.newToken.mov,
-        fontFamily: 'Calibri',
-        fontSize: 12,
-        padding: 5,
-        fill: 'white'
-      })
-    );
+
+    var cardImageObj = new Image();
+    cardImageObj.onload = function() {
+      var card_border = new Konva.Image({
+        x: -32,
+        y: -90,
+        image: cardImageObj,
+        width: 64,
+        height: 90
+      });
+
+      // add the shape to the layer
+      tooltip.add(card_border);
+      $scope.tooltips_layer.batchDraw();
+    };
+    cardImageObj.src = './../static/card.png';
+
+
+    var tokenImageObj = new Image();
+    tokenImageObj.onload = function() {
+      var token_img = new Konva.Image({
+        x: -32,
+        y: -88,
+        image: tokenImageObj,
+        width: 64,
+        height: 88
+      });
+
+      // add the shape to the layer
+      tooltip.add(token_img);
+      token_img.moveDown()
+      $scope.tooltips_layer.batchDraw();
+    };
+    tokenImageObj.src = $scope.newToken.token_image;
+
+
+
 
     token['tooltip_ref'] = tooltip;
 
@@ -390,12 +465,15 @@ angular.module('RPJogo').controller('MainController', ($scope, $rootScope) => {
 
       $scope.$apply();
     }
-    if($scope.newToken.name){
+    if($scope.place_cursor_enabled){
+      $scope.place_cursor_enabled = false;
+      $scope.formEnabled = false;
       $scope.newToken.token_refs = $scope.drawNewToken(x, y);
-      console.log($scope.newToken);
+      console.log('new token', $scope.newToken);
       $scope.token_dict[($scope.newToken.name)] = $scope.newToken;
       $scope.newToken = {
         color : '#00ff00',
+        token_image : './../../TokenImages/dragon.png',
       };
       $scope.$apply()
 
@@ -409,15 +487,36 @@ angular.module('RPJogo').controller('MainController', ($scope, $rootScope) => {
     $scope.gridSetScale(scale);
   }
 
-  $scope.drawTokensOnClick = function () {
+  $scope.placeNewTokenOnClick = function () {
     console.log('drawTokensOnClick');
-    $scope.drawTokens();
-    $scope.tokens_layer.moveToTop();
-
-    $scope.tokens_layer.draw();
+    // alert('Clique em um hexágono para inserir o token criado')
+    $scope.place_cursor_enabled = true;
+    // $scope.$apply()
 
   }
 
+  $scope.ataqueRegistrado = function (name) {
+    let dano = prompt("Insira o dano", "1")
+    $scope.token_dict[name].hp_max -= dano;
+    $scope.$apply()
+  }
+
+  $scope.healRegistrado = function (name) {
+    let heal = prompt("Insira o heal", "1")
+    $scope.token_dict[name].hp_max = parseInt(heal) + parseInt($scope.token_dict[name].hp_max);
+    $scope.$apply()
+  }
+
+
+  $scope.removeTokenOnClick = function (token) {
+    token.token_refs.img_ref.destroy()
+    token.token_refs.tooltip_ref.destroy()
+    token.token_refs.text_ref.destroy()
+
+    delete $scope.token_dict[token.name];
+    $scope.stage.draw()
+    // $scope.$apply()
+  }
   $scope.gridSetScale = function (scale) {
     $scope.stage.scaleX(scale);
     $scope.stage.scaleY(scale);

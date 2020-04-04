@@ -22,19 +22,19 @@
   <script src="./../angular/MainController.js" charset="utf-8"></script>
 
 </head>
-<body ng-controller='MainController' >
+<body ng-controller='MainController' ng-class="{'place-pointer' : place_cursor_enabled}">
 
   <!-- <input type="text" name="" value="" ng-model='txt'>
   <p>{{txt}}</p>
   <button type="button" name="button" class="btn" ng-click='clogClicked()'>Console log</button> -->
 
-  <div class="card" ng-class="{'sword-pointer'  : sword_cursor_enabled}" >
+  <div class="card" ng-class="{'sword-pointer'  : sword_cursor_enabled, 'heal-pointer'  : heal_cursor_enabled}" >
     <div class="row">
       <div class="col">
         <div class="card m-3" >
           <div class="card-body">
             <h5 class="card-title">{{last_clicked}}</h5>
-            <div id="container" style='clear:both; overflow:auto; height:70vh; width:70vw' ng-init='initGrid()' ></div>
+            <div id="container" style='clear:both; overflow:auto; height:80vh; width:60vw' ng-init='initGrid()' ></div>
 
           </div>
           <div class="form-group">
@@ -44,26 +44,35 @@
         </div>
       </div>
 
-      <div class="col">
+      <div class="card p-2 col " style="max-height : 90vh; overflow-y:scroll;">
 
-        <div class="card m-3 justify-content-md-center">
+        <div ng-if='formEnabled' class="card m-3 justify-content-md-center">
 
 
 
           <h5 class="card-title">Novo Token</h5>
-          <div class="row p-1">
+          <div class="col p-1">
 
-            <div class="input-group col">
+            <div class="input-group row">
               <div class="input-group-prepend">
                 <span class="input-group-text">Nome</span>
               </div>
-              <input class="form-control" type="text" ng-model='newToken.name'>
+              <input class="form-control" type="text" ng-model='newToken.name' >
             </div>
-            <div class="input-group col">
+            <div class="input-group row">
               <div class="input-group-prepend">
                 <span class="input-group-text">Cor</span>
               </div>
-              <input class="form-control" type="color" ng-model='newToken.color' value='#00FF00'>
+              <!-- <input class="form-control" type="color" ng-model='newToken.color' value='#00FF00'> -->
+              <select class="form-control" name="" ng-model='newToken.color' ng-init='newToken.color = gridInfo.teams[0].color'>
+                <option style='background-color:  {{team.color}}' ng-repeat='team in gridInfo.teams' value="{{team.color}}">
+
+                  <div class="input-group-prepend" style='background-color:  {{team.color}}'>
+                    <span class="input-group-text"></span>
+                  </div>
+                  {{team.name}}
+                </option>
+              </select>
             </div>
 
           </div>
@@ -75,22 +84,34 @@
                 <img class="input-group-text" src="./../static/icons/shield-24.png" alt="">
                 <!-- <span >CA</span> -->
               </div>
-              <input class="form-control" type="text" ng-model='newToken.ca'>
+              <input class="form-control" type="number" ng-model='newToken.ca' ng-init='newToken.ca = 8'>
             </div>
             <div class="input-group col">
               <div class="input-group-prepend">
                 <img class="input-group-text" src="./../static/icons/heart-24.png" alt="">
               </div>
-              <input class="form-control" type="text" ng-model='newToken.hp_max'>
+              <input class="form-control" type="number" ng-model='newToken.hp_max' ng-init='newToken.hp_max = 20'>
             </div>
             <div class="input-group col">
               <div class="input-group-prepend">
                 <img class="input-group-text" src="./../static/icons/walking-24.png" alt="">
               </div>
-              <input class="form-control" type="text" ng-model='newToken.mov'>
+              <input class="form-control" type="number" ng-model='newToken.mov' ng-init = 'newToken.mov = 30'>
             </div>
 
 
+          </div>
+
+          <div class="row p-1">
+            <div class="col form-group">
+              <input type="file" class="form-control" id='imageFile' name="img_input" accept="image/png, image/jpeg" ng-model='img_src' onchange='angular.element(this).scope().changed_src(this)'>
+              <img ng-src='{{img_src}}' alt="" width="200px" height="200px">
+
+            </div>
+          </div>
+
+          <div class="row justify-content-md-center form-group">
+            <button type="button" name="button" class="btn btn-primary" ng-click='placeNewTokenOnClick()'>Posicionar</button>
           </div>
 
           <!-- <div class="form-group">
@@ -103,24 +124,55 @@
           <p>Selected token = {{selectedToken.name()}}</p> -->
 
         </div>
+        <div class="alert alert-secondary" role="alert" ng-if='isEmpty(tokens_dict)'>
+          Não há tokens criados ainda
+        </div>
+        <div class="card m- justify-content-md-center">
+          <button ng-if='!formEnabled' type="button" name="button" class="btn btn-success" ng-click='newTokenCreateOnClick()'>New Token</button>
 
-      </div>
+        </div>
 
-    </div>
+        <!-- Token List -->
+        <div>
+          <div class="card m-3 border-solid justify-content-md-center"  style='border-color : {{token.color}};' ng-repeat='token in token_dict' >
+            <div class="row justify-content-md-left m-1">
+              <div class="">
+                <img ng-src="{{token.token_image}}" alt="" width="100px" height="100px">
+              </div>
+              <div class="col">
+                <div class="row justify-content-md-center" role="alert">
+                  <h2>{{token.name}}</h2>
+                </div>
+                <div class="row justify-content-md-around ml-3">
+                  <div class="">
+                    <img class="" src="./../static/icons/heart-50.png" width="50px" height="50px">
+                  </div>
+                  <h3>{{token.hp_max}}</h3>
+                  <div class="">
+                    <img class="" src="./../static/icons/shield-50.png" width="50px" height="50px">
+                  </div>
+                  <h3>{{token.ca}}</h3>
+                  <div class="">
+                    <img class="" src="./../static/icons/walking-50.png" width="50px" height="50px">
+                  </div>
+                  <h3>{{token.mov}}</h3>
+                </div>
+                <div class="row justify-content-md-center">
+                  <button type="button" name="remove" class="btn btn-warning" ng-click='removeTokenOnClick(token)'>Remove</button>
+                </div>
+              </div>
 
-    <div class="card">
+            </div>
 
-      <div class="row justify-content-md-center">
+          </div>
 
-        <div class="card col-lg-2 m-3 border-solid" ng-repeat='token in token_dict' style='border-color : {{token.color}}'>
-          <span class="card-title" >{{token.name}}</span>
         </div>
 
 
       </div>
 
-
     </div>
+
 
   </div>
 

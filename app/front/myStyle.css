@@ -6,3 +6,11 @@
 .sword-pointer {
   cursor : url(static/sword-cursor.png), auto;
 }
+
+.place-pointer {
+  cursor : url(static/place-cursor.png), auto;
+}
+
+.heal-pointer {
+  cursor : url(static/heal-cursor-24.png), auto;
+}
