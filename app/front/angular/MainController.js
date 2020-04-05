@@ -1,42 +1,150 @@
 angular.module('RPJogo').controller('MainController', ($scope, $rootScope) => {
 
-  $scope.gridInfo = {
-    n_linhas : 30
-    , n_colunas: 60
-    , hex_radius : 20
-    , text : {
-      fontSize : 10
-      , fontFamily : 'Calibri'
-      , fill : 'black'
-    },
-    teams : [
-      {
-        name : "aliados",
-        color : "#54C6BE"
-      },
-      {
-        name : "inimigos",
-        color : "#E5243F"
-      },
-      {
-        name : "neutros",
-        color : "#F7B15C"
-      },
-    ]
 
+
+  $scope.startServerConnection = function () {
+    $rootScope.socket = io();
+
+    $rootScope.socket.on("connect", () => {
+      console.log("Player id = ", $rootScope.socket.id);
+    })
+
+    $rootScope.socket.on("setup", (data) => {
+      console.log('setup received');
+      $scope.token_dict = data.token_dict;
+      for (var key in $scope.token_dict) {
+        let value = $scope.token_dict[key]
+        if (value.position) {
+          $scope.placeToken(value.position.x, value.position.y, value)
+        }
+      }
+      $scope.$apply()
+    })
+
+    $rootScope.socket.on('jogador-conectado', (data) => {
+      if ($rootScope.socket.id !== data.playerId) {
+
+        console.log("Novo jogador conectado: " , data);
+      }
+    });
+
+    $rootScope.socket.on('new-token', (data) => {
+      if ($rootScope.socket.id !== data.playerId) {
+
+        console.log("Novo Token inserido: ", data.newToken);
+        $scope.token_dict[data.newToken.name] = data.newToken;
+        $scope.$apply()
+      }
+    });
+
+    $rootScope.socket.on('saved-token', (data) => {
+      if ($rootScope.socket.id !== data.playerId) {
+
+        console.log("Token Editado: ", data.token);
+        $scope.saveToken(data.token)
+        $scope.$apply()
+      }
+    });
+
+    $rootScope.socket.on('placed-token', (data) => {
+      if ($rootScope.socket.id !== data.playerId) {
+        $scope.placeToken(data.position.x, data.position.y, data.token)
+      }
+    });
+
+    $rootScope.socket.on('moved-token', (data) => {
+      if ($rootScope.socket.id !== data.playerId) {
+        console.log('moved-token');
+        let token = $scope.token_dict[data.token.name]
+        $scope.moveToken(data.newPosition.x, data.newPosition.y, token)
+      }
+    });
   }
 
-  $scope.formEnabled = false
+
+  $scope.formEnabled = false;
+
+  $scope.formControll = {
+
+    enabled : false,
+    isNew : true,
+    validName(name) {
+      if (name in $scope.token_dict) {
+        return false
+      }
+      return true
+    },
+    isValid(){
+      if (this.isNew && !this.validName($scope.token_in_form.name) ) {
+        return false
+      }
+      return true
+    },
+    clear(){
+      $scope.token_in_form = {
+        color : '#00ff00',
+        token_image : './../../TokenImages/dragon.png',
+      };
+    },
+
+  }
 
   $scope.newTokenCreateOnClick = function () {
-    $scope.formEnabled = true
+    $scope.formControll.enabled = true;
+    $scope.formControll.isNew = true;
+
   }
 
-  $scope.newToken = {
+  $scope.token_in_form = {
     name : 'teste',
     color : '#00ff00',
     token_image : './../../TokenImages/dragon.png',
   };
+
+  $scope.actionDictOnHexClick = new Proxy({
+
+    moveClick(x, y){
+      $scope.last_clicked = x +'-'+y;
+
+      $scope.moveToken(x, y, $scope.selectedToken)
+
+      $rootScope.socket.emit('move-token', {
+        newPosition : {x, y}
+        , token : $scope.selectedToken
+      })
+
+      $scope.selectedToken = null;
+
+
+
+      $scope.activeActionOnHexClick = null;
+    },
+    placeClick(x, y){
+      $scope.place_cursor_enabled = false;
+      $scope.formControll.enabled = false;
+      $scope.placeToken(x, y, $scope.token_to_draw);
+
+      $rootScope.socket.emit('place-token', {
+        token : $scope.token_to_draw
+        , position : {x, y}
+      });
+
+      $scope.formControll.clear();
+      $scope.$apply()
+      $scope.activeActionOnHexClick = null;
+    }
+
+  }, {
+    get : function (target, name) {
+      return name in target ?
+            target[name] :
+            function (x, y) {
+              console.log("No active action", x, y);
+            }
+    }
+  });
+
+  $scope.activeActionOnHexClick = null;
 
 
 
@@ -53,92 +161,25 @@ angular.module('RPJogo').controller('MainController', ($scope, $rootScope) => {
     let file_input = document.querySelector('#imageFile');
     $scope.img_src = './../../TokenImages/' + file_input.files[0].name
     console.log($scope.img_src);
-    $scope.newToken.token_image = $scope.img_src;
+    $scope.token_to_draw.token_image = $scope.img_src;
     $scope.$apply()
   }
 
   $scope.startZoomInStage = function () {
-    var scaleBy = 1.1;
-      $scope.stage.on('wheel', e => {
-        e.evt.preventDefault();
-        var oldScale = $scope.stage.scaleX();
-
-        var mousePointTo = {
-          x: $scope.stage.getPointerPosition().x / oldScale - $scope.stage.x() / oldScale,
-          y: $scope.stage.getPointerPosition().y / oldScale - $scope.stage.y() / oldScale
-        };
-
-        var newScale =
-          e.evt.deltaY > 0 ? oldScale * scaleBy : oldScale / scaleBy;
-
-        newScale = newScale > 5 ? 5 : newScale
-        newScale = newScale < 1 ? 1 : newScale
-        $scope.stage.scale({ x: newScale, y: newScale });
-
-        var newPos = {
-          x:
-            -(mousePointTo.x - $scope.stage.getPointerPosition().x / newScale) *
-            newScale,
-          y:
-            -(mousePointTo.y - $scope.stage.getPointerPosition().y / newScale) *
-            newScale
-        };
-
-        $scope.stage.position(newPos);
-        $scope.stage.batchDraw();
-      });
+    $scope.grid_board.startZoomInStage()
 
   }
 
-  $scope.indexToPosition = function (x, y) {
-    let distance_x = Math.sqrt($scope.gridInfo.hex_radius**2 * 3 / 4) * 2;
-    let distance_y = (3/4 * $scope.gridInfo.hex_radius) * 2;
-    let base_step_x = y%2 !=0 ? 0 :  distance_x/2;
 
-    let pos_x = x * distance_x + base_step_x;
-    let pos_y = y * distance_y;
 
-    return [pos_x, pos_y]
-  }
-
-  $scope.getRelativePointerPosition = function(node) {
-    // the function will return pointer position relative to the passed node
-    var transform = node.getAbsoluteTransform().copy();
-    // to detect relative position we need to invert transform
-    transform.invert();
-
-    // get pointer (say mouse or touch) position
-    var pos = node.getStage().getPointerPosition();
-
-    // now we find relative point
-    return transform.point(pos);
-  }
 
   $scope.initGrid = function () {
-    $scope.stage = new Konva.Stage({
-      container: 'container',
-      // width: window.innerWidth *2,
-      // height: window.innerHeight *2,
-      width: $scope.gridInfo.n_colunas * $scope.gridInfo.hex_radius,
-      height: $scope.gridInfo.n_linhas * $scope.gridInfo.hex_radius,
-      scaleX : 1,
-      scaleY : 1,
-      // draggable :true,
-    });
 
-    $scope.grid_layer = new Konva.Layer();
-    $scope.tokens_layer = new Konva.Layer();
-    $scope.labels_layer = new Konva.Layer({
-      listening : false
-    });
-    $scope.tooltips_layer = new Konva.Layer({
-      listening : false
-    });
+    $scope.startServerConnection();
+    $scope.grid_board = new Board("container", n_colunas = 60 , n_linhas = 30 , hex_radius = 20);
+
     $scope.drawGrid();
-    $scope.stage.add($scope.grid_layer);
-    $scope.stage.add($scope.tokens_layer);
-    $scope.stage.add($scope.labels_layer);
-    $scope.stage.add($scope.tooltips_layer);
+
     $scope.startZoomInStage();
 
   }
@@ -147,105 +188,38 @@ angular.module('RPJogo').controller('MainController', ($scope, $rootScope) => {
 
 
 
-    $scope.hexagons = []
-    for (var i = 0; i < $scope.gridInfo.n_linhas; i++) {
-      let linha = []
+    $scope.hexagons = $scope.grid_board.drawGrid()
 
-
-      for (var j = 0; j < $scope.gridInfo.n_colunas; j++) {
-        let hexagon = {}
-        let position = $scope.indexToPosition(j, i);
-        hexagon['img_ref'] = new Konva.RegularPolygon({
-          x: position[0],
-          y: position[1],
-          sides: 6,
-          radius: $scope.gridInfo.hex_radius,
-          stroke: 'black',
-          strokeWidth: 1,
-          name : j+"_"+i
-        });
-
-        hexagon['img_ref'].on('click', function(){
-          // this.fill('green')
-          // $scope.grid_layer.draw()
-          // console.log(this.name());
-
+    $scope.hexagons.map((linha) => {
+      linha.map((el) => {
+        el['img_ref'].on('click', function(){
           $scope.hexOnClick(this.name())
         })
-
-        linha.push(hexagon);
-        $scope.grid_layer.add(hexagon['img_ref']);
-      }
-      $scope.hexagons.push(linha)
-    }
+      })
+    });
 
 
 
-    // add the $scope.grid_layer to the $scope.stage
+
+    // add the $scope.grid_board.grid_layer to the $scope.grid_board.stage
 
     // $scope.setListeners()
   }
 
-  // $scope.drawTokens = function () {
-  //
-  //   let hexagon = {}
-  //   let x_index = $scope.newToken.x, y_index = $scope.newToken.y;
-  //   let position = $scope.indexToPosition( x_index, y_index);
-  //   hexagon['img_ref'] = new Konva.RegularPolygon({
-  //     x: position[0],
-  //     y: position[1],
-  //     sides: 6,
-  //     radius: $scope.gridInfo.hex_radius,
-  //     fill : 'blue',
-  //     stroke: 'red',
-  //     strokeWidth: 1,
-  //     name : y_index+"_"+x_index
-  //   });
-  //
-  //   hexagon['img_ref'].on('mouseenter', function() {
-  //     $scope.stage.container().style.cursor = 'pointer';
-  //   });
-  //
-  //   hexagon['img_ref'].on('mouseleave', function() {
-  //     $scope.stage.container().style.cursor = 'default';
-  //   });
-  //   hexagon['img_ref'].on('click', function(){
-  //     let [x,y] = this.name().split('_').map((element) => parseInt(element))
-  //     console.log("Clicked", x, y);
-  //     if ($scope.selectedToken) {
-  //       $scope.selectedToken.fill('blue')
-  //     }
-  //     $scope.selectedToken = this;
-  //     this.fill('green');
-  //     $scope.tokens_layer.draw()
-  //     $scope.$apply()
-  //   })
-  //   $scope.tokens_layer.add(hexagon['img_ref'])
-  //
-  //
-  // }
 
-  $scope.drawNewToken = function (x_index, y_index) {
 
-    let token = {}
-    let position = $scope.indexToPosition( x_index, y_index);
+  $scope.drawNewToken = function (x_index, y_index, token_to_draw) {
 
-    token['img_ref'] = new Konva.RegularPolygon({
-      x: position[0],
-      y: position[1],
-      sides: 6,
-      radius: $scope.gridInfo.hex_radius,
-      fill : $scope.newToken.color,
-      stroke: 'blue',
-      strokeWidth: 1,
-      name : $scope.newToken.name
-    });
+    let token = $scope.grid_board.drawNewToken(x_index, y_index, token_to_draw)
 
+    $scope.setTokenMouseEvents(token);
+
+    return token
+
+  }
+
+  $scope.setTokenMouseEvents = function (token) {
     token['img_ref'].on('mouseenter', function(ev) {
-
-      // let tooltip = $scope.tooltips_layer.find('.'+this.name()+"_tooltip")[0];
-      // tooltip.visible(true)
-      // $scope.tooltips_layer.draw()
 
       if (ev.evt.ctrlKey) {
         $scope.sword_cursor_enabled = true;
@@ -253,7 +227,7 @@ angular.module('RPJogo').controller('MainController', ($scope, $rootScope) => {
         // console.log($scope.sword_cursor_enabled);
       }
       else {
-        // $scope.stage.container().style.cursor = 'pointer';
+        // $scope.grid_board.stage.container().style.cursor = 'pointer';
       }
     });
     token['img_ref'].on('mousemove', function(ev) {
@@ -270,20 +244,19 @@ angular.module('RPJogo').controller('MainController', ($scope, $rootScope) => {
         // console.log($scope.sword_cursor_enabled);
       }
       else {
-        let tooltip = $scope.tooltips_layer.find('.'+this.name()+"_tooltip")[0];
-        var mousePos = $scope.getRelativePointerPosition($scope.stage);
+        let tooltip = $scope.grid_board.tooltips_layer.find('.'+this.name()+"_tooltip")[0];
+        var mousePos = $scope.grid_board.getRelativePointerPosition($scope.grid_board.stage);
         tooltip.x(mousePos.x);
         tooltip.y(mousePos.y-10);
         tooltip.visible(true);
-        $scope.tooltips_layer.draw();
+        $scope.grid_board.tooltips_layer.draw();
       }
     });
-
     token['img_ref'].on('mouseleave', function(ev) {
 
-      let tooltip = $scope.tooltips_layer.find('.'+this.name()+"_tooltip")[0];
+      let tooltip = $scope.grid_board.tooltips_layer.find('.'+this.name()+"_tooltip")[0];
       tooltip.visible(false)
-      $scope.tooltips_layer.draw()
+      $scope.grid_board.tooltips_layer.draw()
       $scope.sword_cursor_enabled = false;
       $scope.heal_cursor_enabled = false;
       $scope.$apply()
@@ -303,183 +276,23 @@ angular.module('RPJogo').controller('MainController', ($scope, $rootScope) => {
       }
       else{
         if ($scope.selectedToken) {
-          $scope.selectedToken.stroke('blue')
+          $scope.selectedToken.token_refs['img_ref'].stroke('blue')
         }
-        $scope.selectedToken = this;
+        $scope.selectedToken = $scope.token_dict[this.name()];
+        $scope.activeActionOnHexClick = 'moveClick';
         this.stroke('red');
-        $scope.tokens_layer.draw()
+        $scope.grid_board.tokens_layer.draw()
         $scope.$apply()
       }
 
 
     })
-    $scope.tokens_layer.add(token['img_ref']);
-    $scope.tokens_layer.draw()
-
-
-    token['text_ref'] = new Konva.Text({
-      x: position[0],
-      y: position[1],
-      text: $scope.newToken.name,
-      align: 'center',
-      verticalAlign: 'middle',
-      fontSize: $scope.gridInfo.text.fontSize,
-      fontFamily: $scope.gridInfo.text.fontFamily,
-      fill: $scope.gridInfo.text.fill,
-      name : $scope.newToken.name + "_label"
-    });
-    token['text_ref'].x(token['text_ref'].x() - token['text_ref'].getWidth()/2)
-    token['text_ref'].y(token['text_ref'].y() - token['text_ref'].getHeight()/2)
-    $scope.labels_layer.add(token['text_ref'])
-    $scope.labels_layer.draw()
-
-    var tooltip = new Konva.Label({
-        x: position[0],
-        y: position[1],
-        opacity: 1,
-        name : $scope.newToken.name + "_tooltip"
-      });
-
-    tooltip.add(
-      new Konva.Tag({
-        fill: 'black',
-        pointerDirection: 'down',
-        pointerWidth: 10,
-        pointerHeight: 10,
-        lineJoin: 'round',
-        shadowColor: 'black',
-        shadowBlur: 10,
-        shadowOffsetX: 10,
-        shadowOffsetY: 10,
-        shadowOpacity: 1
-      })
-    );
-
-
-    var cardImageObj = new Image();
-    cardImageObj.onload = function() {
-      var card_border = new Konva.Image({
-        x: -32,
-        y: -90,
-        image: cardImageObj,
-        width: 64,
-        height: 90
-      });
-
-      // add the shape to the layer
-      tooltip.add(card_border);
-      $scope.tooltips_layer.batchDraw();
-    };
-    cardImageObj.src = './../static/card.png';
-
-
-    var tokenImageObj = new Image();
-    tokenImageObj.onload = function() {
-      var token_img = new Konva.Image({
-        x: -32,
-        y: -88,
-        image: tokenImageObj,
-        width: 64,
-        height: 88
-      });
-
-      // add the shape to the layer
-      tooltip.add(token_img);
-      token_img.moveDown()
-      $scope.tooltips_layer.batchDraw();
-    };
-    tokenImageObj.src = $scope.newToken.token_image;
-
-
-
-
-    token['tooltip_ref'] = tooltip;
-
-    $scope.tooltips_layer.add(token['tooltip_ref']);
-    $scope.tooltips_layer.draw()
-
-    console.log('tooltip', tooltip);
-
-    return token
-
-  }
-
-  $scope.drawTooltip = function () {
-    var tooltip = new Konva.Label({
-        x: 170,
-        y: 75,
-        opacity: 0.75
-      });
-
-      tooltip.add(
-        new Konva.Tag({
-          fill: 'black',
-          pointerDirection: 'down',
-          pointerWidth: 10,
-          pointerHeight: 10,
-          lineJoin: 'round',
-          shadowColor: 'black',
-          shadowBlur: 10,
-          shadowOffsetX: 10,
-          shadowOffsetY: 10,
-          shadowOpacity: 0.5
-        })
-      );
-
-      tooltip.add(
-        new Konva.Text({
-          text: 'Tooltip pointing down',
-          fontFamily: 'Calibri',
-          fontSize: 18,
-          padding: 5,
-          fill: 'white'
-        })
-      );
   }
 
   $scope.hexOnClick = function (name) {
     let [x, y] = name.split('_');
     console.log("X: ", x, "Y: ", y);
-
-    if ($scope.selectedToken) {
-
-      $scope.last_clicked = x +'-'+y;
-
-      let [posX, posY] = $scope.indexToPosition(x, y)
-      $scope.selectedToken.x(posX);
-      $scope.selectedToken.y(posY);
-      let label = $scope.labels_layer.find('.'+$scope.selectedToken.name()+"_label")[0];
-      // console.log('getwidth', label.getWidth());
-      label.x(posX - label.getWidth()/2);
-      label.y(posY - label.getHeight()/2);
-      console.log(label);
-
-      $scope.selectedToken.stroke('blue');
-      $scope.selectedToken = null;
-
-
-      $scope.tokens_layer.draw();
-      $scope.labels_layer.draw();
-
-
-
-      $scope.$apply();
-    }
-    if($scope.place_cursor_enabled){
-      $scope.place_cursor_enabled = false;
-      $scope.formEnabled = false;
-      $scope.newToken.token_refs = $scope.drawNewToken(x, y);
-      console.log('new token', $scope.newToken);
-      $scope.token_dict[($scope.newToken.name)] = $scope.newToken;
-      $scope.newToken = {
-        color : '#00ff00',
-        token_image : './../../TokenImages/dragon.png',
-      };
-      $scope.$apply()
-
-
-
-    }
+    $scope.actionDictOnHexClick[$scope.activeActionOnHexClick](x, y);
 
   }
 
@@ -488,9 +301,11 @@ angular.module('RPJogo').controller('MainController', ($scope, $rootScope) => {
   }
 
   $scope.placeNewTokenOnClick = function () {
+    $scope.token_to_draw = $scope.token_in_form
     console.log('drawTokensOnClick');
     // alert('Clique em um hexágono para inserir o token criado')
     $scope.place_cursor_enabled = true;
+    $scope.activeActionOnHexClick = 'placeClick'
     // $scope.$apply()
 
   }
@@ -507,26 +322,103 @@ angular.module('RPJogo').controller('MainController', ($scope, $rootScope) => {
     $scope.$apply()
   }
 
+  $scope.redrawTokenOnClick = function (token) {
+    $scope.token_to_draw = token;
+    $scope.place_cursor_enabled = true;
+    $scope.activeActionOnHexClick = 'placeClick'
+  }
+  $scope.editTokenOnClick = function (token) {
+    if (token.token_refs) {
+      $scope.destroyReferencesFromToken(token);
+      $scope.grid_board.stage.draw();
+    }
+    $scope.token_in_form = token;
+    $scope.token_in_form.old_name = token.name;
+    $scope.formControll.isNew = false;
+    $scope.formControll.enabled = true;
+  }
 
   $scope.removeTokenOnClick = function (token) {
+    $scope.destroyReferencesFromToken(token)
+    // console.log('$scope.token_dict[token.name]',$scope.token_dict[token.name]);
+
+    // delete $scope.token_dict[token.name];
+    $scope.grid_board.stage.draw()
+    // $scope.$apply()
+  }
+
+  $scope.saveTokenOnClick = function () {
+
+    $scope.saveToken($scope.token_in_form)
+
+    $rootScope.socket.emit('save-token', {token : $scope.token_in_form});
+    $scope.formControll.enabled = false;
+    $scope.formControll.clear();
+
+
+
+  }
+
+  $scope.saveToken = function (token) {
+    if (!(token.name in $scope.token_dict)) {
+      console.log('aopa');
+      delete $scope.token_dict[token.old_name];
+
+      // $scope.$apply()
+    }
+    $scope.token_dict[token.name] = token;
+  }
+
+  $scope.placeToken = function (x, y, token) {
+    token.token_refs = $scope.drawNewToken(x, y, token);
+    console.log('new token', token);
+    $scope.token_dict[(token.name)] = token;
+  }
+
+  $scope.moveToken = function (x, y, token) {
+    let [posX, posY] = $scope.grid_board.indexToPosition(x, y)
+    token.token_refs['img_ref'].x(posX);
+    token.token_refs['img_ref'].y(posY);
+    let label = token.token_refs['text_ref']
+    // console.log('getwidth', label.getWidth());
+    label.x(posX - label.getWidth()/2);
+    label.y(posY - label.getHeight()/2);
+    console.log(label);
+
+    token.token_refs['img_ref'].stroke('blue');
+
+
+
+    $scope.grid_board.tokens_layer.draw();
+    $scope.grid_board.labels_layer.draw();
+
+    $scope.$apply();
+  }
+
+  $scope.saveNewTokenOnClick = function () {
+    $rootScope.socket.emit('new-token', $scope.token_in_form);
+    console.log('save new token on click');
+    $scope.token_dict[$scope.token_in_form.name] = $scope.token_in_form;
+
+
+
+    $scope.formControll.enabled = false;
+    $scope.formControll.clear();
+
+
+  }
+
+  $scope.gridSetScale = function (scale) {
+    $scope.grid_board.stage.scaleX(scale);
+    $scope.grid_board.stage.scaleY(scale);
+    $scope.grid_board.stage.draw()
+  }
+
+  $scope.destroyReferencesFromToken = function (token) {
     token.token_refs.img_ref.destroy()
     token.token_refs.tooltip_ref.destroy()
     token.token_refs.text_ref.destroy()
-
-    delete $scope.token_dict[token.name];
-    $scope.stage.draw()
-    // $scope.$apply()
-  }
-  $scope.gridSetScale = function (scale) {
-    $scope.stage.scaleX(scale);
-    $scope.stage.scaleY(scale);
-    $scope.stage.draw()
-  }
-
-  $scope.setHexColor = function(cor){
-    console.log(cor);
-    $scope.hexagon.fill(cor);
-    $scope.grid_layer.draw()
+    delete $scope.token_dict[token.name].token_refs;
   }
 
 })

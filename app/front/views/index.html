@@ -17,6 +17,13 @@
   <script src="./../lib/js/pixi.min.js" charset="utf-8"></script>
   <script src="./../lib/js/honeycomb.min.js" charset="utf-8"></script>
   <script src="./../lib/js/konva.min.js" charset="utf-8"></script>
+
+
+  <script src="./../lib/js/socket.io.js" charset="utf-8"></script>
+
+
+  <!-- Models -->
+  <script src="./../models/Board.js" charset="utf-8"></script>
   <!-- JS application -->
   <script src="./../angular/index.js" charset="utf-8"></script>
   <script src="./../angular/MainController.js" charset="utf-8"></script>
@@ -46,26 +53,27 @@
 
       <div class="card p-2 col " style="max-height : 90vh; overflow-y:scroll;">
 
-        <div ng-if='formEnabled' class="card m-3 justify-content-md-center">
+        <div ng-if='formControll.enabled' class="card m-3 justify-content-md-center">
 
 
 
           <h5 class="card-title">Novo Token</h5>
-          <div class="col p-1">
+          <div class="row p-1">
 
-            <div class="input-group row">
+            <div class="input-group col">
               <div class="input-group-prepend">
                 <span class="input-group-text">Nome</span>
               </div>
-              <input class="form-control" type="text" ng-model='newToken.name' >
+              <input class="form-control" type="text" ng-model='token_in_form.name' >
+
             </div>
-            <div class="input-group row">
+            <div class="input-group col">
               <div class="input-group-prepend">
                 <span class="input-group-text">Cor</span>
               </div>
-              <!-- <input class="form-control" type="color" ng-model='newToken.color' value='#00FF00'> -->
-              <select class="form-control" name="" ng-model='newToken.color' ng-init='newToken.color = gridInfo.teams[0].color'>
-                <option style='background-color:  {{team.color}}' ng-repeat='team in gridInfo.teams' value="{{team.color}}">
+              <!-- <input class="form-control" type="color" ng-model='token_in_form.color' value='#00FF00'> -->
+              <select class="form-control" name="" ng-model='token_in_form.color' ng-init='token_in_form.color = grid_board.teams[0].color'>
+                <option style='background-color:  {{team.color}}' ng-repeat='team in grid_board.teams' value="{{team.color}}">
 
                   <div class="input-group-prepend" style='background-color:  {{team.color}}'>
                     <span class="input-group-text"></span>
@@ -76,7 +84,11 @@
             </div>
 
           </div>
-
+          <div ng-if="!formControll.validName(token_in_form.name) && formControll.isNew" class="row p-3">
+            <div class="alert alert-danger"  role="alert">
+              Já existe um token com este nome
+            </div>
+          </div>
           <div class="row p-1">
 
             <div class="input-group col">
@@ -84,19 +96,19 @@
                 <img class="input-group-text" src="./../static/icons/shield-24.png" alt="">
                 <!-- <span >CA</span> -->
               </div>
-              <input class="form-control" type="number" ng-model='newToken.ca' ng-init='newToken.ca = 8'>
+              <input class="form-control" type="number" ng-model='token_in_form.ca' ng-init='token_in_form.ca = 8'>
             </div>
             <div class="input-group col">
               <div class="input-group-prepend">
                 <img class="input-group-text" src="./../static/icons/heart-24.png" alt="">
               </div>
-              <input class="form-control" type="number" ng-model='newToken.hp_max' ng-init='newToken.hp_max = 20'>
+              <input class="form-control" type="number" ng-model='token_in_form.hp_max' ng-init='token_in_form.hp_max = 20'>
             </div>
             <div class="input-group col">
               <div class="input-group-prepend">
                 <img class="input-group-text" src="./../static/icons/walking-24.png" alt="">
               </div>
-              <input class="form-control" type="number" ng-model='newToken.mov' ng-init = 'newToken.mov = 30'>
+              <input class="form-control" type="number" ng-model='token_in_form.mov' ng-init = 'token_in_form.mov = 30'>
             </div>
 
 
@@ -111,24 +123,17 @@
           </div>
 
           <div class="row justify-content-md-center form-group">
-            <button type="button" name="button" class="btn btn-primary" ng-click='placeNewTokenOnClick()'>Posicionar</button>
-          </div>
+            <button ng-if='formControll.isNew' type="button" name="button" class="btn btn-primary" ng-disabled='!formControll.isValid()' ng-click='saveNewTokenOnClick()'>Criar</button>
+            <button ng-if='!formControll.isNew' type="button" name="button" class="btn btn-primary" ng-disabled='!formControll.isValid()' ng-click='saveTokenOnClick()'>Salvar</button>
 
-          <!-- <div class="form-group">
-            <input type="number" ng-model = 'newToken.x'>
-            <input type="number" ng-model = 'newToken.y'>
-            <button type="button" name="button" ng-click='drawTokensOnClick()' class="btn btn-primary">
-              Draw Tokens
-            </button>
           </div>
-          <p>Selected token = {{selectedToken.name()}}</p> -->
 
         </div>
         <div class="alert alert-secondary" role="alert" ng-if='isEmpty(tokens_dict)'>
           Não há tokens criados ainda
         </div>
         <div class="card m- justify-content-md-center">
-          <button ng-if='!formEnabled' type="button" name="button" class="btn btn-success" ng-click='newTokenCreateOnClick()'>New Token</button>
+          <button ng-if='!formControll.enabled' type="button" name="button" class="btn btn-success" ng-click='newTokenCreateOnClick()'>New Token</button>
 
         </div>
 
@@ -136,10 +141,10 @@
         <div>
           <div class="card m-3 border-solid justify-content-md-center"  style='border-color : {{token.color}};' ng-repeat='token in token_dict' >
             <div class="row justify-content-md-left m-1">
-              <div class="">
+              <div class="col">
                 <img ng-src="{{token.token_image}}" alt="" width="100px" height="100px">
               </div>
-              <div class="col">
+              <div class="col-6">
                 <div class="row justify-content-md-center" role="alert">
                   <h2>{{token.name}}</h2>
                 </div>
@@ -157,9 +162,12 @@
                   </div>
                   <h3>{{token.mov}}</h3>
                 </div>
-                <div class="row justify-content-md-center">
-                  <button type="button" name="remove" class="btn btn-warning" ng-click='removeTokenOnClick(token)'>Remove</button>
-                </div>
+
+              </div>
+              <div class="col justify-content-md-center" ng-if='!formControll.enabled'>
+                <button ng-if='token.token_refs' type="button" name="remove" class="btn btn-warning m-1" ng-click='removeTokenOnClick(token)'>Remove</button>
+                <button ng-if='!token.token_refs' type="button" name="redraw" class="btn btn-primary m-1" ng-click='redrawTokenOnClick(token)'>Redraw</button>
+                <button type="button" name="redraw" class="btn btn-primary m-1" ng-click='editTokenOnClick(token)'>Edit</button>
               </div>
 
             </div>
