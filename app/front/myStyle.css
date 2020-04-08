@@ -14,3 +14,76 @@
 .heal-pointer {
   cursor : url(static/heal-cursor-24.png), auto;
 }
+
+.absolute-top-nav{
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+}
+
+.scroll-background-img{
+  background-image: url("./../static/scroll.png");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+.sidenav-fixed-right{
+  align-items: center;
+  /* display: flex; */
+  position: fixed;
+  right: -20vw;
+  top: 10vh;
+  width: 30vw;
+  z-index: 1;
+  transition: transform 1s;
+  transition: z-index 0.1s ease-in 1s;
+  height: 90vh;
+}
+
+.token-side-r{
+  position : relative;
+  transition: transform 1s;
+  height: 20vh;
+
+}
+.token-side-r:hover{
+  transform: translate(-20vw, 0);
+
+}
+
+.sidenav-fixed-left{
+  align-items: center;
+  /* display: flex; */
+  position: fixed;
+  left: -20vw;
+  top: 10vh;
+  width: 30vw;
+  z-index: 1;
+  transition: transform 1s;
+  transition: z-index 0.1s ease-in 1s;
+  height: 90vh;
+}
+
+.token-side-l{
+  position : relative;
+  transition: transform 1s;
+  height: 20vh;
+
+}
+.token-side-l:hover{
+  transform: translate(20vw, 0);
+
+}
+
+.board-container{
+  width: 100vw;
+  padding-left: 12vw;
+  padding-right: 12vw;
+}
+
+/* .sidenav-fixed-right:hover{
+  transition: z-index 0.1s ease-in 0s;
+  z-index: 5;
+
+} */

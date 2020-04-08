@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt" ng-app='RPJogo'>
+<head>
+  <meta charset="utf-8">
+  <title>RPJogo</title>
+
+  <!-- Style -->
+  <link rel="stylesheet" href="./../../lib/css/bootstrap.css">
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=MedievalSharp" />
+  <link rel="stylesheet" href="./../../myStyle.css">
+  <!-- JS Libs -->
+  <script src="./../../lib/js/jquery.min.js" charset="utf-8"></script>
+  <script src="./../../lib/js/angular.min.js" charset="utf-8"></script>
+
+  <script src="./../../lib/js/popper.min.js" charset="utf-8"></script>
+  <script src="./../../lib/js/bootstrap.js" charset="utf-8"></script>
+  <script src="./../../lib/js/angular-ui-router.js" charset="utf-8"></script>
+  <script src="./../../lib/js/pixi.min.js" charset="utf-8"></script>
+  <script src="./../../lib/js/honeycomb.min.js" charset="utf-8"></script>
+  <script src="./../../lib/js/konva.min.js" charset="utf-8"></script>
+
+
+  <script src="./../../lib/js/socket.io.js" charset="utf-8"></script>
+
+
+  <!-- Models -->
+  <script src="./../../models/BoardRender.js" charset="utf-8"></script>
+  <!-- JS application -->
+  <script src="./../../angular/index.js" charset="utf-8"></script>
+  <script src="./../../angular/MainController.js" charset="utf-8"></script>
+
+</head>
+<body ng-controller='MainController' ng-class="{'place-pointer' : place_cursor_enabled}" ng-init='startControllVar()'>
+
+  <!-- <input type="text" name="" value="" ng-model='txt'>
+  <p>{{txt}}</p>
+  <button type="button" name="button" class="btn" ng-click='clogClicked()'>Console log</button> -->
+
+  <div class="card board-container" ng-class="{'sword-pointer'  : sword_cursor_enabled, 'heal-pointer'  : heal_cursor_enabled}" >
+    <div class="row overflow-hidden">
+      <div class="col ">
+        <div class="card" style='clear:both; overflow:scroll; height:90vh; width:76vw;z-index:1'  >
+          <div class="absolute-top-nav p-1" ng-if='boardControll.menubar.enabled' ng-include="'./views/board/menubar.html'"></div>
+          <!-- Include Menubar -->
+
+          <div class="card-body" >
+            <h5 class="card-title">{{last_clicked}}</h5>
+
+            <div  id="container"   ng-if='boardControll.container.enabled'></div>
+
+            <div  ng-if='boardControll.placeholder.enabled' class="row justify-content-md-center" >
+              <div class="alert alert-warning text-center" role="alert" style='width:50%'>
+                <h5>Nenhum tabuleiro foi criado ainda!</h5>
+                <div class="row-md-4" >
+                  <img src="./../static/sad-pikachu.png" class="img-fluid" style="width:50%">
+                </div>
+                <button type="button" class="btn btn-outline-info mt-3" ng-click='newBoardOnClick()'>Clique aqui para criar</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+
+    </div>
+
+
+  </div>
+
+  <div class="sidenav-fixed-right container-fluid align-self-center" ng-include="'./views/board/tokenList.html'" style=""></div>
+
+  <div class="sidenav-fixed-left container-fluid align-self-center" ng-include="'./views/board/EnemyList.html'" style=""></div>
+
+
+  <div ng-include="'./views/board/modal.html'"></div>
+
+
+</body>
+</html>
